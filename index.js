@@ -38,6 +38,7 @@ const loadContract = (name, isL2) => {
   console.log('latestVerifierBlockNum', latestVerifierBlockNum)
   let touchedAccounts = new Set()
   for (let i = 1; i <= latestVerifierBlockNum; i++) {
+    console.log('adding touched accounts from block number', i)
     const verifierBlock = await verifierProvider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true])
     touchedAccounts.add(verifierBlock.transactions[0].from)
     touchedAccounts.add(verifierBlock.transactions[0].to)
