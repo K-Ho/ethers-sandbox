@@ -44,17 +44,12 @@ const loadContract = (name, isL2) => {
     let i = Math.floor((start + finish)/2)
     const sequencerBlock = await l2Provider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true])
     const verifierBlock = await verifierProvider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true])
-    // if (sequencerBlock.stateRoot === verifierBlock.stateRoot) {
-    //   console.log(`matching state roots for block ${i}: ${sequencerBlock.stateRoot}`)
-    // } else {
-    //   console.error(`ERROR: MISMATCHED STATE ROOTS AT BLOCK ${i}. Sequencer has state root: ${sequencerBlock.stateRoot}. Verifier has state root:  ${verifierBlock.stateRoot}`)
-    // }
-    if (sequencerBlock.transactions[0].hash === verifierBlock.transactions[0].hash) {
+    if (sequencerBlock.stateRoot === verifierBlock.stateRoot) {
       start = i
-      console.log(`matching tx hashes for block ${i}: ${sequencerBlock.transactions[0].hash}`)
+      console.log(`matching state roots for block ${i}: ${sequencerBlock.stateRoot}`)
     } else {
       finish = i
-      console.error(`ERROR: MISMATCHED txs AT BLOCK ${i}. Sequencer has tx hash: ${sequencerBlock.transactions[0].hash}. Verifier has tx hash:  ${verifierBlock.transactions[0].hash}`)
+      console.error(`ERROR: MISMATCHED STATE ROOTS AT BLOCK ${i}. Sequencer has state root: ${sequencerBlock.stateRoot}. Verifier has state root:  ${verifierBlock.stateRoot}`)
     }
   }
   // const response = await axios.get(`${DEPLOYER_URL}/addresses.json`);
