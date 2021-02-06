@@ -12,23 +12,22 @@ const {
 } = require('ethers');
 const { getContractInterface } = require('@eth-optimism/contracts/build/src/contract-defs')
 const axios = require('axios');
-const DEPLOYER_URL = 'http://localhost:8080';
-const VERIFIER_URL = 'http://localhost:8045'
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const optimismURL = process.env.L2_URL
 const l1URL = process.env.L1_URL
 const l2Provider = new JsonRpcProvider(optimismURL)
-const verifierProvider = new JsonRpcProvider(VERIFIER_URL)
 const l1Provider = new JsonRpcProvider(l1URL)
 
 const l1Wallet = new Wallet(process.env.L1_USER_PRIVATE_KEY, l1Provider)
 const l2Wallet = new Wallet(process.env.L2_USER_PRIVATE_KEY, l2Provider)
-let l1Addresses
+let l1Addresses = {
+  'OVM_StateCommitmentChain': '0x9F5E5EaB38198cB384a2E5508bcFE7ab5f33D532'
+}
 let l2Addresses = {
   'OVM_ExecutionManager': '0xdeaddeaddeaddeaddeaddeaddeaddeaddead0005',
-  'OVM_L2CrossDomainMessenger': '0x4200000000000000000000000000000000000007'
+  'OVM_L2CrossDomainMessenger': '0x4200000000000000000000000000000000000007',
 }
 
 const loadContract = (name, isL2) => {
@@ -36,43 +35,18 @@ const loadContract = (name, isL2) => {
 }
 
 ;(async () => {
-  const latestVerifierBlockNum = await verifierProvider.getBlockNumber()
-  console.log('latestVerifierBlockNum', latestVerifierBlockNum)
-  let start = 0
-  let finish = latestVerifierBlockNum
-  while (start !== finish) {
-    let i = Math.floor((start + finish)/2)
-    const sequencerBlock = await l2Provider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true])
-    const verifierBlock = await verifierProvider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true])
-    // if (sequencerBlock.stateRoot === verifierBlock.stateRoot) {
-    //   console.log(`matching state roots for block ${i}: ${sequencerBlock.stateRoot}`)
-    // } else {
-    //   console.error(`ERROR: MISMATCHED STATE ROOTS AT BLOCK ${i}. Sequencer has state root: ${sequencerBlock.stateRoot}. Verifier has state root:  ${verifierBlock.stateRoot}`)
-    // }
-    if (sequencerBlock.transactions[0].hash === verifierBlock.transactions[0].hash) {
-      start = i
-      console.log(`matching tx hashes for block ${i}: ${sequencerBlock.transactions[0].hash}`)
-    } else {
-      finish = i
-      console.error(`ERROR: MISMATCHED txs AT BLOCK ${i}. Sequencer has tx hash: ${sequencerBlock.transactions[0].hash}. Verifier has tx hash:  ${verifierBlock.transactions[0].hash}`)
-    }
+  const scc  = loadContract('OVM_StateCommitmentChain', false)
+  console.log('scc addr', scc.address)
+  const fpw = await scc.FRAUD_PROOF_WINDOW()
+  console.log('fpw', fpw.toString())
+  const batchHeader = {
+    batchIndex: 65,
+    batchRoot: '0xC798DBAD4AE3AF0CDA17EED9E08B8C2504D241AE1B078C59E9DBC04B6FC38ED5',
+    batchSize: 1274,
+    prevTotalElements: 23158,
+    extraData: '0x00000000000000000000000000000000000000000000000000000000601C8EF00000000000000000000000008641BDD2CE2D4B4B2E9F0391F14DA414F66254CB',
   }
-  // const response = await axios.get(`${DEPLOYER_URL}/addresses.json`);
-  // l1Addresses = response.data;
-  // console.log('geth chain Id', (await l2Provider.getNetwork()).chainId)
-  // const ExecutionManager  = s loadContract('OVM_ExecutionManager', true)
-  // console.log('EM addr', ExecutionManager.address)
-  // console.log('executionManager chain id', (await ExecutionManager.ovmCHAINID()).toString())
-  // hexZeroPad(currentWallet, 32)
-  // const L2Messenger  = loadContract('OVM_L2CrossDomainMessenger', true)
-  // console.log(await L2Messenger.xDomainMessageSender())
-
-
-  // const filter = {
-  //   address: '0x5A081fa7e3483504385e7C804AB1509499e2A408',
-  //   topics: [id(`WithdrawalInitiated(address,uint256)`), hexZeroPad('0xe75103858b0b02b76DD78250442DE26e5Ac331D9', 32)],
-  //   fromBlock: 0,
-  // };
-  // const logs = await l2Provider.getLogs(filter);
-  // console.log('located in block #', logs[0].blockNumber)
+  const tx = await scc.connect(l1Wallet).deleteStateBatch(batchHeader, {gasLimit: 200000})
+  const receipt = await tx.wait()
+  console.log('deleted state batch. tx receipt:', receipt)
 })()
