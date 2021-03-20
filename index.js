@@ -11,6 +11,7 @@ const {
 	Wallet,
 } = require('ethers');
 const { getContractInterface } = require('@eth-optimism/contracts/build/src/contract-defs')
+const { Watcher } = require('@eth-optimism/watcher')
 const axios = require('axios');
 const DEPLOYER_URL = 'http://localhost:8080';
 const VERIFIER_URL = 'http://localhost:8045'
@@ -20,8 +21,9 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const optimismURL = process.env.L2_URL
 const l1URL = process.env.L1_URL
 const l2Provider = new JsonRpcProvider(optimismURL)
-const verifierProvider = new JsonRpcProvider(VERIFIER_URL)
 const l1Provider = new JsonRpcProvider(l1URL)
+
+let watcher
 
 const l1Wallet = new Wallet(process.env.L1_USER_PRIVATE_KEY, l1Provider)
 const l2Wallet = new Wallet(process.env.L2_USER_PRIVATE_KEY, l2Provider)
@@ -38,13 +40,18 @@ const loadContract = (name, isL2) => {
 }
 
 ;(async () => {
-  const AddressManager  = loadContract('Lib_AddressManager', false)
-  const ctcAddress = await AddressManager.getAddress('OVM_CanonicalTransactionChain')
-  console.log('ctc address:', ctcAddress)
-  l1Addresses['OVM_CanonicalTransactionChain'] = ctcAddress
-  const OVM_CanonicalTransactionChain = loadContract('OVM_CanonicalTransactionChain', false)
-  console.log('getTotalElements', await OVM_CanonicalTransactionChain.getTotalElements())
-  console.log('getNumPendingQueueElements', await OVM_CanonicalTransactionChain.getNumPendingQueueElements())
-  console.log('getNextQueueIndex', await OVM_CanonicalTransactionChain.getNextQueueIndex())
-  console.log('getQueueElement', await OVM_CanonicalTransactionChain.getQueueElement(2162))  
+  watcher = new Watcher({
+		l1: {
+			provider: l1Provider,
+			messengerAddress: process.env.L1_MESSENGER_ADDRESS
+		},
+		l2: {
+			provider: l2Provider,
+			messengerAddress: process.env.L2_MESSENGER_ADDRESS
+		}
+	})
+  const messageHashes = await watcher.getMessageHashesFromL1Tx('0x0fb6707f58317d2d00c42d07c24176c21b9622c5e189e4558aa4c355ec79c3ed')
+  console.log(messageHashes)
+  const receipt = await watcher.getL2TransactionReceipt(messageHashes[0])
+  console.log(receipt)
 })()
