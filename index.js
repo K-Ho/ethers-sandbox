@@ -14,50 +14,13 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const optimismURL = process.env.L2_URL
 const l2Provider = new JsonRpcProvider(optimismURL)
 
-const range = (
-  start,
-  stop
-) => {
-  return [...Array(stop - start)].map((_, i) => {
-    return start + i
-  })
-}
-
 ;(async () => {
-  const highestBlockNumber = await l2Provider.getBlockNumber()
-  console.log('pulling all txs until', highestBlockNumber)
-  let currentBlockNumber = 0
-  const txs = []
-  while (currentBlockNumber < highestBlockNumber) {
-    try {
-      const targetBlockNumber = Math.min(
-        currentBlockNumber + MAX_BLOCKS_PER_LOOP,
-        highestBlockNumber
-      )
-
-      console.log(`Loading blocks ${currentBlockNumber} - ${targetBlockNumber}`)
-      const blocks = await Promise.all(
-        range(currentBlockNumber, targetBlockNumber + 1).reduce((blockPromises, i) => {
-          blockPromises.push(
-           l2Provider.send('eth_getBlockByNumber', [`0x${i.toString(16)}`, true]),
-          )
-          return blockPromises
-        }, [])
-      )
-
-      for (const block of blocks) {
-        txs.push(block.transactions[0])
-      }
-      currentBlockNumber = targetBlockNumber
-    } catch (err) {
-      console.log(`Caught an error trying to load blocks. Trying again in 5s. ${err}`)
-      await sleep(5000)
-    }
+  const txs = require('./mainnet-txs.json')
+  const methodIds = {}
+  for (const tx of txs) {
+    if(!tx) continue;
+    const methodId = tx.input.slice(2,10)
+    methodIds[methodId] = (methodIds[methodId]+1) || 1 ;
   }
-  fs.writeFile('mainnet-txs.json', JSON.stringify(txs), (err) => {
-    if (err) {
-        throw err;
-    }
-    console.log("JSON data is saved.");
-  })
+  console.log(methodIds)
 })()
