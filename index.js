@@ -39,12 +39,7 @@ const loadContract = (name, isL2) => {
 
 ;(async () => {
   const AddressManager  = loadContract('Lib_AddressManager', false)
-  const ctcAddress = await AddressManager.getAddress('OVM_CanonicalTransactionChain')
-  console.log('ctc address:', ctcAddress)
-  l1Addresses['OVM_CanonicalTransactionChain'] = ctcAddress
-  const OVM_CanonicalTransactionChain = loadContract('OVM_CanonicalTransactionChain', false)
-  console.log('getTotalElements', await OVM_CanonicalTransactionChain.getTotalElements())
-  console.log('getNumPendingQueueElements', await OVM_CanonicalTransactionChain.getNumPendingQueueElements())
-  console.log('getNextQueueIndex', await OVM_CanonicalTransactionChain.getNextQueueIndex())
-  console.log('getQueueElement', await OVM_CanonicalTransactionChain.getQueueElement(2162))  
+  console.log('OVM_L1ETHGateway', await AddressManager.getAddress('OVM_L1ETHGateway'))
+  console.log('Proxy__OVM_L1ETHGateway', await AddressManager.getAddress('Proxy__OVM_L1ETHGateway'))
+  console.log('Proxy__OVM_L1CrossDomainMessenger', await AddressManager.getAddress('Proxy__OVM_L1CrossDomainMessenger'))
 })()
